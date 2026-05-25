@@ -44,9 +44,19 @@ export default function AuthScreen({ onContinueAsGuest, isDarkMode }: AuthScreen
       await signInWithPopup(auth, provider);
     } catch (err: any) {
       console.error("Google authentication error:", err);
-      setError(
-        'O Google bloqueou o popup dentro do iframe do AI Studio. Clique no botão de "ABRIR EM NOVA ABA" logo acima para rodar o app livre de restrições ou use a aba "E-mail e Senha" ao lado!'
-      );
+      if (err.code === 'auth/popup-blocked') {
+        setError(
+          'O pop-up de login foi bloqueado pelo seu navegador. Por favor, autorize os pop-ups para este site ou utilize um método alternativo (como E-mail de login).'
+        );
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError(
+          'Domínio não autorizado para Login com Google. Adicione o seu domínio atual aos "Domínios Autorizados" na aba Settings de Authentication do painel Firebase.'
+        );
+      } else {
+        setError(
+          `Falha de autenticação com o Google: ${err.message || err.code || 'Erro desconhecido.'}`
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -267,28 +277,12 @@ export default function AuthScreen({ onContinueAsGuest, isDarkMode }: AuthScreen
               </form>
             ) : (
               /* Google Auth Layout */
-              <div className="space-y-3.5" id="auth-google-form">
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed space-y-2">
-                  <p className="font-semibold text-slate-750 dark:text-slate-200">ℹ️ Por que o erro de bloqueio acontece?</p>
-                  <p>Mesmo maximizado, o app ainda roda dentro de um iframe protegido da plataforma AI Studio. Para usar o login com Google sem bloqueio, use o botão azul de nova aba abaixo!</p>
-                </div>
-
-                {/* Direct Bypass Link (Big & Prominent) */}
-                <button
-                  onClick={handleOpenNewTab}
-                  className="w-full flex items-center justify-center gap-2 p-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/10 transition-all cursor-pointer"
-                >
-                  <ExternalLink className="w-4 h-4 animate-bounce" />
-                  Abrir APP em Nova Aba para Logar
-                </button>
-
-                <span className="block text-[10px] text-center font-bold text-slate-400 uppercase tracking-widest my-2">- ou tente de qualquer forma -</span>
-
-                {/* Standard Google Trigger */}
+              <div className="space-y-4" id="auth-google-form">
+                {/* Standard Google Trigger (Big, branded and clean) */}
                 <button
                   onClick={handleGoogleLogin}
                   disabled={loading}
-                  className="w-full flex items-center justify-center gap-3 p-3.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-755 border border-slate-200 dark:border-slate-700 shadow-sm font-bold text-xs transition-all focus:outline-none disabled:opacity-50 cursor-pointer"
+                  className="w-full flex items-center justify-center gap-3 p-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-100 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm font-black text-xs transition-all focus:outline-none disabled:opacity-50 cursor-pointer active:scale-98"
                 >
                   {loading ? (
                     <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
@@ -300,8 +294,28 @@ export default function AuthScreen({ onContinueAsGuest, isDarkMode }: AuthScreen
                       />
                     </svg>
                   )}
-                  Tentar Sincronizar pelo Iframe
+                  {loading ? 'Conectando...' : 'Entrar com o Google'}
                 </button>
+
+                {/* If we detect we are in an iframe, show a polite development tip */}
+                {window.self !== window.top ? (
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-150 dark:border-slate-800/80 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed text-center space-y-2">
+                    <p className="font-semibold text-slate-750 dark:text-slate-200">ℹ️ Dica de ambiente do AI Studio</p>
+                    <p>Como você está visualizando o app em modo de desenvolvimento dentro do editor, se o login com Google sofrer bloqueio de popup pelo navegador, você pode usar o botão abaixo para abrir o app em tela cheia fora do iframe:</p>
+                    <button
+                      onClick={handleOpenNewTab}
+                      type="button"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold text-[10px] transition-all cursor-pointer shadow-sm"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Abrir APP em Nova Aba
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-slate-400 text-center leading-relaxed">
+                    Você está rodando o aplicativo em tela cheia/aba própria. O login através da sua conta Google irá sincronizar seus dados em nuvem com total segurança.
+                  </p>
+                )}
               </div>
             )}
 
