@@ -1,0 +1,70 @@
+{
+  "entities": {
+    "fixedBill": {
+      "title": "Fixed Bill",
+      "description": "Recurring monthly fixed bills or incomes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["expense", "income"] },
+        "dueDate": { "type": "number" },
+        "category": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "description", "amount", "type", "dueDate", "category"]
+    },
+    "creditCard": {
+      "title": "Credit Card",
+      "description": "Credit card configurations",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "limit": { "type": "number" },
+        "closingDay": { "type": "number" },
+        "dueDay": { "type": "number" },
+        "color": { "type": "string" },
+        "last4": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "name", "limit", "closingDay", "dueDay", "color", "last4"]
+    },
+    "transaction": {
+      "title": "Transaction",
+      "description": "Any single spending or earning entry, including credit card purchases",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["expense", "income"] },
+        "date": { "type": "string", "format": "date" },
+        "category": { "type": "string" },
+        "cardId": { "type": "string" },
+        "billId": { "type": "string" },
+        "isPaid": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "description", "amount", "type", "date", "category"]
+    }
+  },
+  "firestore": {
+    "fixedBills/{billId}": {
+      "schema": "fixedBill",
+      "description": "Collection of fixed monthly bills and incomes"
+    },
+    "creditCards/{cardId}": {
+      "schema": "creditCard",
+      "description": "Collection of credit cards owned by users"
+    },
+    "transactions/{transactionId}": {
+      "schema": "transaction",
+      "description": "Collection of individual credit card expenses or main expenses/incomes"
+    }
+  }
+}

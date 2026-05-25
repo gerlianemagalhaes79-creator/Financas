@@ -1,0 +1,127 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(ownerId) {
+      return ownerId == request.auth.uid;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Fixed Bills Collection
+    match /fixedBills/{billId} {
+      allow read, list: if isSignedIn() && isOwner(existing().ownerId);
+      allow create: if isSignedIn() 
+                    && isValidId(billId)
+                    && isOwner(incoming().ownerId)
+                    && incoming().keys().hasAll(['id', 'ownerId', 'description', 'amount', 'type', 'dueDate', 'category', 'createdAt'])
+                    && incoming().keys().size() == 8
+                    && incoming().id == billId
+                    && incoming().description is string && incoming().description.size() > 0 && incoming().description.size() <= 200
+                    && incoming().amount is number && incoming().amount > 0
+                    && (incoming().type == 'expense' || incoming().type == 'income')
+                    && incoming().dueDate is number && incoming().dueDate >= 1 && incoming().dueDate <= 31
+                    && incoming().category is string && incoming().category.size() > 0 && incoming().category.size() <= 100
+                    && incoming().createdAt == request.time;
+      
+      allow update: if isSignedIn()
+                    && isOwner(existing().ownerId)
+                    && isOwner(incoming().ownerId)
+                    && incoming().id == existing().id
+                    && incoming().createdAt == existing().createdAt
+                    && incoming().description is string && incoming().description.size() > 0 && incoming().description.size() <= 200
+                    && incoming().amount is number && incoming().amount > 0
+                    && (incoming().type == 'expense' || incoming().type == 'income')
+                    && incoming().dueDate is number && incoming().dueDate >= 1 && incoming().dueDate <= 31
+                    && incoming().category is string && incoming().category.size() > 0 && incoming().category.size() <= 100;
+                    
+      allow delete: if isSignedIn() && isOwner(existing().ownerId);
+    }
+
+    // Credit Cards Collection
+    match /creditCards/{cardId} {
+      allow read, list: if isSignedIn() && isOwner(existing().ownerId);
+      allow create: if isSignedIn()
+                    && isValidId(cardId)
+                    && isOwner(incoming().ownerId)
+                    && incoming().keys().hasAll(['id', 'ownerId', 'name', 'limit', 'closingDay', 'dueDay', 'color', 'last4', 'createdAt'])
+                    && incoming().keys().size() == 9
+                    && incoming().id == cardId
+                    && incoming().name is string && incoming().name.size() > 0 && incoming().name.size() <= 100
+                    && incoming().limit is number && incoming().limit > 0
+                    && incoming().closingDay is number && incoming().closingDay >= 1 && incoming().closingDay <= 31
+                    && incoming().dueDay is number && incoming().dueDay >= 1 && incoming().dueDay <= 31
+                    && incoming().color is string && incoming().color.size() > 0 && incoming().color.size() <= 50
+                    && incoming().last4 is string && incoming().last4.size() == 4
+                    && incoming().createdAt == request.time;
+      
+      allow update: if isSignedIn()
+                    && isOwner(existing().ownerId)
+                    && isOwner(incoming().ownerId)
+                    && incoming().id == existing().id
+                    && incoming().createdAt == existing().createdAt
+                    && incoming().name is string && incoming().name.size() > 0 && incoming().name.size() <= 100
+                    && incoming().limit is number && incoming().limit > 0
+                    && incoming().closingDay is number && incoming().closingDay >= 1 && incoming().closingDay <= 31
+                    && incoming().dueDay is number && incoming().dueDay >= 1 && incoming().dueDay <= 31
+                    && incoming().color is string && incoming().color.size() > 0 && incoming().color.size() <= 50
+                    && incoming().last4 is string && incoming().last4.size() == 4;
+
+      allow delete: if isSignedIn() && isOwner(existing().ownerId);
+    }
+
+    // Transactions Collection
+    match /transactions/{transactionId} {
+      allow read, list: if isSignedIn() && isOwner(existing().ownerId);
+      allow create: if isSignedIn()
+                    && isValidId(transactionId)
+                    && isOwner(incoming().ownerId)
+                    && incoming().keys().hasAll(['id', 'ownerId', 'description', 'amount', 'type', 'date', 'category', 'cardId', 'billId', 'isPaid', 'createdAt'])
+                    && incoming().keys().size() == 11
+                    && incoming().id == transactionId
+                    && incoming().description is string && incoming().description.size() > 0 && incoming().description.size() <= 200
+                    && incoming().amount is number && incoming().amount > 0
+                    && (incoming().type == 'expense' || incoming().type == 'income')
+                    && incoming().date is string && incoming().date.size() >= 10 && incoming().date.size() <= 20
+                    && incoming().category is string && incoming().category.size() > 0 && incoming().category.size() <= 100
+                    && (incoming().cardId == null || incoming().cardId is string)
+                    && (incoming().billId == null || incoming().billId is string)
+                    && incoming().isPaid is bool
+                    && incoming().createdAt == request.time;
+                    
+      allow update: if isSignedIn()
+                    && isOwner(existing().ownerId)
+                    && isOwner(incoming().ownerId)
+                    && incoming().id == existing().id
+                    && incoming().createdAt == existing().createdAt
+                    && incoming().description is string && incoming().description.size() > 0 && incoming().description.size() <= 200
+                    && incoming().amount is number && incoming().amount > 0
+                    && (incoming().type == 'expense' || incoming().type == 'income')
+                    && incoming().date is string && incoming().date.size() >= 10 && incoming().date.size() <= 20
+                    && incoming().category is string && incoming().category.size() > 0 && incoming().category.size() <= 100
+                    && (incoming().cardId == null || incoming().cardId is string)
+                    && (incoming().billId == null || incoming().billId is string)
+                    && incoming().isPaid is bool;
+
+      allow delete: if isSignedIn() && isOwner(existing().ownerId);
+    }
+  }
+}
