@@ -1,22 +1,12 @@
 import React, { useState } from 'react';
-import { 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword 
-} from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../firebase';
 import { 
   Wallet, 
-  Sparkles, 
   Shield, 
   RefreshCw, 
   CheckCircle, 
-  Mail, 
-  Lock, 
-  ExternalLink,
-  LogIn,
-  UserPlus
+  ExternalLink 
 } from 'lucide-react';
 
 interface AuthScreenProps {
@@ -24,17 +14,9 @@ interface AuthScreenProps {
   isDarkMode: boolean;
 }
 
-type AuthMethod = 'email' | 'google';
-
 export default function AuthScreen({ onContinueAsGuest, isDarkMode }: AuthScreenProps) {
-  const [activeTab, setActiveTab] = useState<AuthMethod>('email');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
-  // Email state variables
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isRegistering, setIsRegistering] = useState(false);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -46,55 +28,17 @@ export default function AuthScreen({ onContinueAsGuest, isDarkMode }: AuthScreen
       console.error("Google authentication error:", err);
       if (err.code === 'auth/popup-blocked') {
         setError(
-          'O pop-up de login foi bloqueado pelo seu navegador. Por favor, autorize os pop-ups para este site ou utilize um método alternativo (como E-mail de login).'
+          'O pop-up de login foi bloqueado pelo seu navegador. Por favor, autorize e permita os pop-ups para este site e clique em entrar novamente.'
         );
       } else if (err.code === 'auth/unauthorized-domain') {
         setError(
-          'Domínio não autorizado para Login com Google. Adicione o seu domínio atual aos "Domínios Autorizados" na aba Settings de Authentication do painel Firebase.'
+          'Este domínio atual não está autorizado nos domínios do Firebase Authentication. Adicione-o nas configurações do painel Firebase.'
         );
       } else {
         setError(
           `Falha de autenticação com o Google: ${err.message || err.code || 'Erro desconhecido.'}`
         );
       }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEmailAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) {
-      setError('Por favor, preencha o e-mail e a senha.');
-      return;
-    }
-    if (password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres.');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    try {
-      if (isRegistering) {
-        await createUserWithEmailAndPassword(auth, email, password);
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
-      }
-    } catch (err: any) {
-      console.error("Email auth error:", err);
-      let localizedError = 'Ocorreu um erro ao autenticar.';
-      if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
-        localizedError = 'E-mail ou senha incorretos.';
-      } else if (err.code === 'auth/email-already-in-use') {
-        localizedError = 'Este endereço de e-mail já está em uso.';
-      } else if (err.code === 'auth/invalid-email') {
-        localizedError = 'O formato do e-mail é inválido.';
-      } else if (err.code === 'auth/weak-password') {
-        localizedError = 'A senha é muito fraca. Escolha uma senha mais forte.';
-      }
-      setError(localizedError);
     } finally {
       setLoading(false);
     }
@@ -164,181 +108,68 @@ export default function AuthScreen({ onContinueAsGuest, isDarkMode }: AuthScreen
           </div>
         </div>
 
-        {/* Right Side: Login & Actions */}
-        <div className="col-span-12 md:col-span-6 p-6 sm:p-10 flex flex-col justify-center" id="auth-actions-panel">
-          <div className="text-center md:text-left mb-6">
+        {/* Right Side: Google Login */}
+        <div className="col-span-12 md:col-span-6 p-8 sm:p-12 flex flex-col justify-center" id="auth-actions-panel">
+          <div className="text-center md:text-left mb-8">
             <div className="md:hidden flex justify-center mb-4">
               <div className="p-3 bg-emerald-500 rounded-2xl text-white shadow-xl shadow-emerald-500/20">
                 <Wallet className="w-7 h-7" />
               </div>
             </div>
-            <h1 className="text-xl font-black text-slate-850 dark:text-slate-100 tracking-tight">
-              Acesso à Nuvem
+            <h1 className="text-2xl font-black text-slate-850 dark:text-slate-100 tracking-tight">
+              Acesse sua Conta
             </h1>
-            <p className="text-[11px] text-slate-400 mt-1 max-w-sm mx-auto md:mx-0">
-              Escolha e-mail ou conta Google. E-mail funciona 100% livre de bloqueios do navegador.
+            <p className="text-xs text-slate-400 mt-1.5 leading-relaxed max-w-sm mx-auto md:mx-0">
+              Conecte-se com sua Conta Google para sincronizar automaticamente seus lançamentos, cartões e contas salvas.
             </p>
           </div>
 
-          {/* Tab Selector */}
-          <div className="grid grid-cols-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-5" id="auth-tab-selector">
-            <button
-              onClick={() => { setActiveTab('email'); setError(''); }}
-              className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                activeTab === 'email'
-                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-            >
-              E-mail e Senha
-            </button>
-            <button
-              onClick={() => { setActiveTab('google'); setError(''); }}
-              className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                activeTab === 'google'
-                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-            >
-              G-mail/Google
-            </button>
-          </div>
-
           {error && (
-            <div className="mb-5 p-3 bg-amber-50 dark:bg-amber-950/20 text-amber-850 dark:text-amber-300 border border-amber-200 dark:border-amber-900/50 text-xs rounded-xl flex items-start gap-2 text-left leading-tight" id="auth-error-banner">
-              <span className="shrink-0 font-bold text-amber-500">⚠️</span>
+            <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-950/20 text-amber-850 dark:text-amber-300 border border-amber-200 dark:border-amber-900/50 text-xs rounded-xl flex items-start gap-2 text-left leading-relaxed animate-fade-in" id="auth-error-banner">
+              <span className="shrink-0 font-bold text-amber-500 text-sm">⚠️</span>
               <p>{error}</p>
             </div>
           )}
 
-          <div className="space-y-4">
-            {activeTab === 'email' ? (
-              /* Email Auth Form */
-              <form onSubmit={handleEmailAuth} className="space-y-3.5" id="auth-email-form">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block ml-1">E-mail</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="seu@email.com"
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-850 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 transition-all"
-                      required
-                    />
-                  </div>
-                </div>
+          <div className="space-y-6">
+            {/* Standard Google Trigger (Prominent Visual Design) */}
+            <button
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-3.5 p-4.5 bg-white dark:bg-slate-850 hover:bg-slate-55 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-slate-350 dark:hover:border-slate-500 shadow-md font-black text-sm tracking-wide transition-all focus:outline-none disabled:opacity-50 cursor-pointer active:scale-98"
+            >
+              {loading ? (
+                <RefreshCw className="w-5 h-5 animate-spin text-emerald-500" />
+              ) : (
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path
+                    fill="#EA4335"
+                    d="M12.24 10.285V14.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.859-3.578-7.859-8s3.53-8 7.859-8c2.46 0 4.105 1.025 5.047 1.926l3.245-3.123C18.29 1.19 15.447 0 12.24 0 5.48 0 0 5.37 0 12s5.48 12 12.24 12c7.05 0 11.75-4.82 11.75-11.66 0-.79-.08-1.39-.24-2.055H12.24z"
+                  />
+                </svg>
+              )}
+              {loading ? 'Identificando...' : 'Acessar com o Google'}
+            </button>
 
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block ml-1">Senha (mínimo 6 dígitos)</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="******"
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-850 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 transition-all"
-                      required
-                    />
-                  </div>
-                </div>
-
+            {/* Development helper tip if app is used inside an iframe */}
+            {window.self !== window.top && (
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-150 dark:border-slate-800/80 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed text-center space-y-2.5">
+                <p className="font-semibold text-slate-750 dark:text-slate-200">ℹ️ Dica de visualização</p>
+                <p>O navegador pode restringir popups de autenticação quando o app roda dentro da janela de simulação do editor. Se houver dificuldades, use o botão abaixo para abrir diretamente na sua própria aba livre de travas:</p>
                 <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3 mt-2 bg-slate-850 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                  onClick={handleOpenNewTab}
+                  type="button"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-extrabold text-[11px] transition-all cursor-pointer shadow-sm active:scale-95 hover:scale-102"
                 >
-                  {loading ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-slate-400" />
-                  ) : isRegistering ? (
-                    <UserPlus className="w-3.5 h-3.5" />
-                  ) : (
-                    <LogIn className="w-3.5 h-3.5" />
-                  )}
-                  {isRegistering ? 'Criar Nova Conta' : 'Acessar Conta'}
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Abrir em Nova Aba Externa
                 </button>
-
-                <div className="text-center pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsRegistering(!isRegistering);
-                      setError('');
-                    }}
-                    className="text-[11px] text-emerald-500 hover:text-emerald-600 font-bold underline transition-all bg-transparent outline-none border-none cursor-pointer"
-                  >
-                    {isRegistering 
-                      ? 'Já possui uma conta? Faça Login' 
-                      : 'Não possui conta ainda? Cadastre-se grátis'}
-                  </button>
-                </div>
-              </form>
-            ) : (
-              /* Google Auth Layout */
-              <div className="space-y-4" id="auth-google-form">
-                {/* Standard Google Trigger (Big, branded and clean) */}
-                <button
-                  onClick={handleGoogleLogin}
-                  disabled={loading}
-                  className="w-full flex items-center justify-center gap-3 p-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-100 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm font-black text-xs transition-all focus:outline-none disabled:opacity-50 cursor-pointer active:scale-98"
-                >
-                  {loading ? (
-                    <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
-                  ) : (
-                    <svg className="w-4 h-4" viewBox="0 0 24 24">
-                      <path
-                        fill="#EA4335"
-                        d="M12.24 10.285V14.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.859-3.578-7.859-8s3.53-8 7.859-8c2.46 0 4.105 1.025 5.047 1.926l3.245-3.123C18.29 1.19 15.447 0 12.24 0 5.48 0 0 5.37 0 12s5.48 12 12.24 12c7.05 0 11.75-4.82 11.75-11.66 0-.79-.08-1.39-.24-2.055H12.24z"
-                      />
-                    </svg>
-                  )}
-                  {loading ? 'Conectando...' : 'Entrar com o Google'}
-                </button>
-
-                {/* If we detect we are in an iframe, show a polite development tip */}
-                {window.self !== window.top ? (
-                  <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-150 dark:border-slate-800/80 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed text-center space-y-2">
-                    <p className="font-semibold text-slate-750 dark:text-slate-200">ℹ️ Dica de ambiente do AI Studio</p>
-                    <p>Como você está visualizando o app em modo de desenvolvimento dentro do editor, se o login com Google sofrer bloqueio de popup pelo navegador, você pode usar o botão abaixo para abrir o app em tela cheia fora do iframe:</p>
-                    <button
-                      onClick={handleOpenNewTab}
-                      type="button"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold text-[10px] transition-all cursor-pointer shadow-sm"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      Abrir APP em Nova Aba
-                    </button>
-                  </div>
-                ) : (
-                  <p className="text-[11px] text-slate-400 text-center leading-relaxed">
-                    Você está rodando o aplicativo em tela cheia/aba própria. O login através da sua conta Google irá sincronizar seus dados em nuvem com total segurança.
-                  </p>
-                )}
               </div>
             )}
-
-            {/* Divider */}
-            <div className="flex items-center my-4" id="auth-divider">
-              <hr className="flex-grow border-slate-200 dark:border-slate-800" />
-              <span className="px-3 text-[9px] text-slate-400 font-bold uppercase tracking-wider">Acesso offline ultra rápido</span>
-              <hr className="flex-grow border-slate-200 dark:border-slate-800" />
-            </div>
-
-            {/* Continue as Guest Trigger */}
-            <button
-              onClick={onContinueAsGuest}
-              className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-md shadow-emerald-500/10 font-bold text-xs transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer"
-              id="auth-guest-btn"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Entrar como Visitante (Teste Grátis Local)
-            </button>
           </div>
 
-          <div className="mt-6 text-center text-[10px] text-slate-400">
-            <p>Ao se autenticar com E-mail, seus cartões e contas são guardados na nuvem e salvos automaticamente a cada alteração.</p>
+          <div className="mt-8 text-center text-[10px] text-slate-400 leading-relaxed">
+            <p>Ao fazer o login, suas preferências e movimentações financeiras ficarão salvas com segurança na nuvem.</p>
           </div>
         </div>
 
