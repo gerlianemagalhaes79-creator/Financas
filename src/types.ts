@@ -7,6 +7,8 @@ export interface FixedBill {
   dueDate: number; // Day of the month (1-31)
   category: string;
   createdAt: any; // Firestore Timestamp
+  startMonth?: number; // Starting month (0-11)
+  startYear?: number;  // Starting year
 }
 
 export interface CreditCard {

@@ -8,6 +8,7 @@ import { CreditCard, FixedBill, Transaction, OperationType } from './types';
 import AuthScreen from './components/AuthScreen';
 import DashboardHeader from './components/DashboardHeader';
 import Dashboard from './components/Dashboard';
+import { AlertCircle, X } from 'lucide-react';
 
 export default function App() {
   // Authentication states
@@ -15,6 +16,7 @@ export default function App() {
   const [authChecked, setAuthChecked] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false); // default to light mode as requested
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   // Cloud/Local states
   const [cards, setCards] = useState<CreditCard[]>([]);
@@ -80,7 +82,8 @@ export default function App() {
       });
       setCards(list);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, cardsPath);
+      console.warn("Firestore Cards subs error (this is safe if rules are initiating):", error);
+      setSyncError("Não foi possível conectar com o banco de dados online. O Firestore ainda pode estar finalizando a inicialização. Use o botão 'Sair' no canto superior direito e clique em 'Acessar como Visitante' para testar offline instantaneamente caso não queira esperar!");
     });
 
     // B. Subscribe to Fixed Bills reference
@@ -93,7 +96,8 @@ export default function App() {
       });
       setBills(list);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, billsPath);
+      console.warn("Firestore Bills subs error:", error);
+      setSyncError("Não foi possível sincronizar suas contas fixas na nuvem. Use o Modo Visitante se houver lentidão na sincronização de dados do Firebase.");
     });
 
     // C. Subscribe to Individual Transactions reference
@@ -108,7 +112,7 @@ export default function App() {
       list.sort((a, b) => b.date.localeCompare(a.date));
       setTransactions(list);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, txPath);
+      console.warn("Firestore Transactions subs error:", error);
     });
 
     // Clean up connections on unmount/user logout
@@ -203,24 +207,24 @@ export default function App() {
   };
 
   // 6. Actions / Operations: Bill Functions
-  const handleAddBill = async (billData: Omit<FixedBill, 'id' | 'ownerId' | 'createdAt'>) => {
+  const handleAddBill = async (billData: Omit<FixedBill, 'id' | 'ownerId' | 'createdAt'> & { id?: string }) => {
     if (isGuest) {
-      const id = 'local_bill_' + Math.floor(Math.random() * 10000000);
+      const id = billData.id || ('local_bill_' + Math.floor(Math.random() * 10000000));
       const newBill: FixedBill = {
+        ...billData,
         id,
         ownerId: 'guest',
-        ...billData,
         createdAt: new Date().toISOString()
       };
       saveGuestData('bills', [...bills, newBill]);
     } else if (user) {
       const billsPath = 'fixedBills';
       try {
-        const ref = doc(collection(db, billsPath));
+        const ref = billData.id ? doc(db, 'fixedBills', billData.id) : doc(collection(db, billsPath));
         const newBill: FixedBill = {
+          ...billData,
           id: ref.id,
           ownerId: user.uid,
-          ...billData,
           createdAt: serverTimestamp()
         };
         await setDoc(ref, newBill);
@@ -245,13 +249,13 @@ export default function App() {
   };
 
   // 7. Actions / Operations: Transaction Functions
-  const handleAddTransaction = async (txData: Omit<Transaction, 'id' | 'ownerId' | 'createdAt'>) => {
+  const handleAddTransaction = async (txData: Omit<Transaction, 'id' | 'ownerId' | 'createdAt'> & { id?: string }) => {
     if (isGuest) {
-      const id = 'local_tx_' + Math.floor(Math.random() * 10000000);
+      const id = txData.id || ('local_tx_' + Math.floor(Math.random() * 10000000));
       const newTx: Transaction = {
+        ...txData,
         id,
         ownerId: 'guest',
-        ...txData,
         createdAt: new Date().toISOString()
       };
       const newList = [newTx, ...transactions].sort((a, b) => b.date.localeCompare(a.date));
@@ -259,11 +263,12 @@ export default function App() {
     } else if (user) {
       const txPath = 'transactions';
       try {
-        const ref = doc(collection(db, txPath));
+        const ref = txData.id ? doc(db, 'transactions', txData.id) : doc(collection(db, txPath));
         const newTx: Transaction = {
+          ...txData,
           id: ref.id,
           ownerId: user.uid,
-          ...txData,
+          ...txData, // ensure all txData overrides are complete
           createdAt: serverTimestamp()
         };
         await setDoc(ref, newTx);
@@ -343,6 +348,25 @@ export default function App() {
           isDarkMode={isDarkMode}
           onToggleTheme={handleToggleTheme}
         />
+
+        {/* Dynamic Sync/Firestore Error Notification Banner */}
+        {syncError && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 animate-in fade-in duration-300">
+            <div className="p-4 bg-amber-50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-400 border border-amber-200 dark:border-amber-900 rounded-2xl flex items-start gap-3 shadow-sm">
+              <AlertCircle className="w-5 h-5 shrink-0 text-amber-500 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-xs font-semibold leading-relaxed">{syncError}</p>
+              </div>
+              <button 
+                onClick={() => setSyncError(null)}
+                className="p-1 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg text-amber-500 hover:text-amber-700 dark:hover:text-amber-300 transition-all cursor-pointer"
+                aria-label="Minimizar alerta"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Dashboard Panels */}
         <Dashboard 

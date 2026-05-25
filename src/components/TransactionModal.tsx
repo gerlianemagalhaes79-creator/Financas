@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Transaction } from '../types';
+import { CreditCard, Transaction, FixedBill } from '../types';
 import { X, Calendar, DollarSign, Tag, CircleSlash, ArrowRightLeft, AlertCircle } from 'lucide-react';
 
 interface TransactionModalProps {
@@ -7,13 +7,14 @@ interface TransactionModalProps {
   onClose: () => void;
   cards: CreditCard[];
   preSelectedCardId: string | null;
-  onAddTransaction: (transaction: Omit<Transaction, 'id' | 'ownerId' | 'createdAt'>) => void;
+  onAddTransaction: (transaction: Omit<Transaction, 'id' | 'ownerId' | 'createdAt'> & { id?: string }) => void;
+  onAddBill?: (bill: Omit<FixedBill, 'id' | 'ownerId' | 'createdAt'> & { id?: string }) => void;
   selectedMonth: number;
   selectedYear: number;
 }
 
 const CATEGORIES_EXPENSE = [
-  'Alimentação', 'Moradia', 'Transporte', 'Saúde', 'Educação', 'Lazer', 'Assinaturas', 'Compras', 'Outros'
+  'Comida', 'Roupa', 'Casa', 'Neném', 'Transporte', 'Saúde', 'Educação', 'Lazer', 'Outros'
 ];
 
 const CATEGORIES_INCOME = [
@@ -26,6 +27,7 @@ export default function TransactionModal({
   cards,
   preSelectedCardId,
   onAddTransaction,
+  onAddBill,
   selectedMonth,
   selectedYear,
 }: TransactionModalProps) {
@@ -33,9 +35,10 @@ export default function TransactionModal({
   const [amountStr, setAmountStr] = useState('');
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [date, setDate] = useState('');
-  const [category, setCategory] = useState('Alimentação');
+  const [category, setCategory] = useState('Comida');
   const [cardId, setCardId] = useState<string | null>(null);
   const [isPaid, setIsPaid] = useState(true);
+  const [isFixed, setIsFixed] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   // Sincronizar data inicial com o mês/ano selecionado no cabeçalho para evitar erros de ano/mês distantes
@@ -59,15 +62,16 @@ export default function TransactionModal({
       if (preSelectedCardId) {
         setCardId(preSelectedCardId);
         setType('expense');
-        setCategory('Compras');
+        setCategory('Roupa');
       } else {
         setCardId(null);
         setType('expense');
-        setCategory('Alimentação');
+        setCategory('Comida');
       }
       
       setDescription('');
       setAmountStr('');
+      setIsFixed(false);
       setErrorMsg('');
     }
   }, [isOpen, preSelectedCardId, selectedMonth, selectedYear]);
@@ -78,7 +82,7 @@ export default function TransactionModal({
       setCategory('Salário');
       setCardId(null); // Cartão de crédito geralmente não recebe receitas de fluxo de caixa direto
     } else {
-      setCategory('Alimentação');
+      setCategory('Comida');
     }
   }, [type]);
 
@@ -99,6 +103,27 @@ export default function TransactionModal({
     if (isNaN(amount) || amount <= 0) return setErrorMsg('O valor deve ser maior que zero');
     if (!date) return setErrorMsg('Selecione uma data');
 
+    const day = parseInt(date.split('-')[2]) || 10;
+    
+    // Generate a linked ID if user checked isFixed and we are able to add bills
+    const hasAddBill = !!onAddBill;
+    const optionalBillId = (isFixed && hasAddBill) 
+      ? "bill_" + Math.random().toString(36).substring(2, 11)
+      : null;
+
+    if (isFixed && hasAddBill) {
+      onAddBill!({
+        id: optionalBillId!,
+        description: description.trim(),
+        amount,
+        type,
+        dueDate: day,
+        category,
+        startMonth: selectedMonth,
+        startYear: selectedYear,
+      });
+    }
+
     onAddTransaction({
       description: description.trim(),
       amount,
@@ -106,7 +131,7 @@ export default function TransactionModal({
       date,
       category,
       cardId: cardId === 'none' ? null : cardId,
-      billId: null, // transações padrão não estão atreladas a uma conta fixa diretamente na criação normal
+      billId: optionalBillId, // beautifully linked!
       isPaid: cardId ? false : isPaid, // compra no cartão é faturamento pendente até o pagamento da fatura
     });
 
@@ -254,6 +279,23 @@ export default function TransactionModal({
                 }
               </select>
             </div>
+          </div>
+
+          {/* Repeating Monthly (Fixed Bill Option) */}
+          <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800/50 flex items-center justify-between gap-3 text-xs">
+            <div className="flex flex-col gap-0.5">
+              <span className="font-bold text-slate-700 dark:text-slate-200">Repetir todo mês (Conta Fixa)</span>
+              <span className="text-[10px] text-slate-400">Marcar como recorrente e lançar automaticamente nos próximos meses</span>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer select-none shrink-0">
+              <input 
+                type="checkbox" 
+                checked={isFixed}
+                onChange={(e) => setIsFixed(e.target.checked)}
+                className="sr-only peer" 
+              />
+              <div className="w-9 h-5 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-emerald-500"></div>
+            </label>
           </div>
 
           {/* Submit Button */}

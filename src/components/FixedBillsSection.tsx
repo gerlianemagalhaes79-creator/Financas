@@ -13,7 +13,7 @@ interface FixedBillsSectionProps {
 }
 
 const CATEGORIES_PT = [
-  'Moradia', 'Alimentação', 'Transporte', 'Saúde', 'Educação', 'Lazer', 'Outros', 'Recebimento'
+  'Casa', 'Comida', 'Roupa', 'Neném', 'Transporte', 'Saúde', 'Educação', 'Lazer', 'Outros', 'Recebimento'
 ];
 
 export default function FixedBillsSection({
@@ -30,7 +30,7 @@ export default function FixedBillsSection({
   const [amountStr, setAmountStr] = useState('');
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [dueDateStr, setDueDateStr] = useState('10');
-  const [category, setCategory] = useState('Moradia');
+  const [category, setCategory] = useState('Casa');
   const [errorMsg, setErrorMsg] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -49,16 +49,29 @@ export default function FixedBillsSection({
       type,
       dueDate,
       category,
+      startMonth: selectedMonth,
+      startYear: selectedYear,
     });
 
     setDescription('');
     setAmountStr('');
     setType('expense');
     setDueDateStr('10');
-    setCategory('Moradia');
+    setCategory('Casa');
     setErrorMsg('');
     setIsAdding(false);
   };
+
+  const activeBills = bills.filter(bill => {
+    if (bill.startYear === undefined || bill.startMonth === undefined) {
+      return true; // Retrocompatible
+    }
+    if (bill.startYear < selectedYear) return true;
+    if (bill.startYear === selectedYear && bill.startMonth <= selectedMonth) return true;
+    return false;
+  });
+
+  const futureBillsCount = bills.length - activeBills.length;
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm transition-colors duration-300">
@@ -123,7 +136,7 @@ export default function FixedBillsSection({
                   const val = e.target.value as 'expense' | 'income';
                   setType(val);
                   if (val === 'income') setCategory('Recebimento');
-                  else setCategory('Moradia');
+                  else setCategory('Casa');
                 }}
                 className="w-full text-sm p-2 bg-white dark:bg-slate-850 rounded-lg border border-slate-200 dark:border-slate-850 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-emerald-500 transition-all cursor-pointer"
               >
@@ -189,15 +202,15 @@ export default function FixedBillsSection({
       )}
 
       {/* Bills List */}
-      {bills.length === 0 ? (
+      {activeBills.length === 0 ? (
         <div className="py-8 text-center bg-slate-50 dark:bg-slate-800/20 rounded-xl border border-dashed border-slate-200 dark:border-slate-800/50 flex flex-col items-center justify-center">
           <CalendarDays className="w-8 h-8 text-slate-300 dark:text-slate-755 mb-2" />
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Nenhuma conta fixa</p>
-          <p className="text-[10px] text-slate-400 mt-0.5">Insira despesas ou receitas recorrentes que se repetem todo mês.</p>
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Nenhuma conta fixa ativa</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">Insira despesas ou receitas recorrentes para este mês.</p>
         </div>
       ) : (
         <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
-          {bills.map((bill) => {
+          {activeBills.map((bill) => {
             const isPaid = paidBillIds.includes(bill.id);
             const isExpense = bill.type === 'expense';
 
@@ -276,6 +289,15 @@ export default function FixedBillsSection({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {futureBillsCount > 0 && (
+        <div className="mt-4 pt-3.5 border-t border-slate-100 dark:border-slate-800 text-center">
+          <p className="text-[11px] text-amber-500 font-semibold bg-amber-500/5 rounded-xl py-2 px-3 flex items-center justify-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 animate-pulse text-amber-500" />
+            Agenda: {futureBillsCount} {futureBillsCount === 1 ? 'outra conta cadastrada' : 'outras contas cadastradas'} para o futuro.
+          </p>
         </div>
       )}
     </div>

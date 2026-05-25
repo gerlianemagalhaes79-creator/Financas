@@ -307,7 +307,7 @@ export default function Dashboard({
                       <td className="px-5 py-3.5 text-center">
                         <button
                           onClick={() => onDeleteTransaction(tx.id)}
-                          className="p-1.5 rounded-lg text-slate-450 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all cursor-pointer hover:scale-110 active:scale-90"
                           title="Excluir Lançamento"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -367,7 +367,8 @@ export default function Dashboard({
 
                         <button
                           onClick={() => onDeleteTransaction(tx.id)}
-                          className="p-1 px-1.5 rounded-lg bg-red-50 dark:bg-red-950/20 text-red-555 dark:text-red-400 transition-all"
+                          className="p-1 px-1.5 rounded-lg bg-red-50 dark:bg-red-950/20 text-red-500 dark:text-red-400 transition-all cursor-pointer hover:scale-105 active:scale-95"
+                          title="Excluir Lançamento"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -389,6 +390,7 @@ export default function Dashboard({
         cards={cards}
         preSelectedCardId={selectedCardId}
         onAddTransaction={onAddTransaction}
+        onAddBill={onAddBill}
         selectedMonth={selectedMonth}
         selectedYear={selectedYear}
       />
